@@ -1,0 +1,351 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String      @id @default(cuid())
+  email           String?     @unique
+  mobile_number   String      @unique
+  password_hash   String?
+  user_type       UserRole    @default(PATIENT)
+  status          UserStatus  @default(PENDING)
+  created_at      DateTime    @default(now())
+  updated_at      DateTime    @updatedAt
+  last_login      DateTime?
+
+  // Relationships
+  profiles        Profile[]
+  refresh_tokens  RefreshToken[]
+  otp_verifications OTPVerification[]
+  audit_logs      AuditLog[]
+  invitations_sent Invitation[] @relation("InvitationSender")
+  hospital_users  HospitalUser[]
+  created_hospitals Hospital[] @relation("HospitalCreator")
+  managed_hospitals Hospital[] @relation("HospitalAdmin")
+  hospital_user_invitations HospitalUser[] @relation("HospitalUserInviter")
+  family_groups_created FamilyGroup[] @relation("FamilyGroupPrimaryUser")
+  family_members FamilyMember[]
+
+  @@map("users")
+}
+
+model Hospital {
+  id              String    @id @default(cuid())
+  name            String
+  address         String?
+  contact_number  String?
+  email           String?
+  website         String?
+  status          HospitalStatus @default(ACTIVE)
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  created_by      String
+  admin_id        String?
+
+  // Relationships
+  creator         User      @relation("HospitalCreator", fields: [created_by], references: [id], onDelete: Cascade)
+  admin           User?     @relation("HospitalAdmin", fields: [admin_id], references: [id], onDelete: SetNull)
+  hospital_users  HospitalUser[]
+  departments     Department[]
+  audit_logs      AuditLog[]
+  invitations     Invitation[]
+
+  @@map("hospitals")
+}
+
+model HospitalUser {
+  id           String   @id @default(cuid())
+  hospital_id  String
+  user_id      String
+  role         UserRole
+  department_id String?
+  permissions  Json?
+  status       HospitalUserStatus @default(ACTIVE)
+  invited_by   String?
+  invited_at   DateTime?
+  joined_at    DateTime?
+  created_at   DateTime @default(now())
+
+  // Relationships
+  hospital     Hospital @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  department   Department? @relation(fields: [department_id], references: [id])
+  inviter      User?    @relation("HospitalUserInviter", fields: [invited_by], references: [id])
+
+  @@unique([hospital_id, user_id])
+  @@map("hospital_users")
+}
+
+model Department {
+  id           String   @id @default(cuid())
+  hospital_id  String
+  name         String
+  description  String?
+  status       DepartmentStatus @default(ACTIVE)
+  created_at   DateTime @default(now())
+
+  // Relationships
+  hospital     Hospital @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  hospital_users HospitalUser[]
+
+  @@map("departments")
+}
+
+model Profile {
+  id             String      @id @default(cuid())
+  user_id        String
+  first_name     String?
+  last_name      String?
+  date_of_birth  DateTime?
+  gender         Gender?
+  profile_type   ProfileType
+  created_at     DateTime    @default(now())
+  updated_at     DateTime    @updatedAt
+
+  // Relationships
+  user           User        @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  admin_profile  AdminProfile?
+  doctor_profile DoctorProfile?
+  patient_profile PatientProfile?
+  family_members FamilyMember[]
+  medical_records MedicalRecord[]
+
+  @@map("profiles")
+}
+
+model AdminProfile {
+  id          String   @id @default(cuid())
+  profile_id  String   @unique
+  employee_id String?
+  department  String?
+  permissions Json?
+
+  profile     Profile  @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+
+  @@map("admin_profiles")
+}
+
+model DoctorProfile {
+  id                      String   @id @default(cuid())
+  profile_id              String   @unique
+  medical_license_number  String?
+  specialization          String?
+  department              String?   // Add this line
+  qualifications          String[]
+  experience_years        Int?
+  consultation_fee        Float?
+
+  profile                 Profile  @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+
+  @@map("doctor_profiles")
+}
+
+model PatientProfile {
+  id              String   @id @default(cuid())
+  profile_id      String   @unique
+  blood_group     String?
+  allergies       String[]
+  chronic_conditions String[]
+
+  profile         Profile  @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+
+  @@map("patient_profiles")
+}
+
+model FamilyGroup {
+  id               String           @id @default(cuid())
+  primary_user_id  String
+  group_name       String?
+  created_at       DateTime         @default(now())
+  updated_at       DateTime         @updatedAt
+
+  // Relationships
+  primary_user     User             @relation("FamilyGroupPrimaryUser", fields: [primary_user_id], references: [id], onDelete: Cascade)
+  family_members   FamilyMember[]
+
+  @@map("family_groups")
+}
+
+model FamilyMember {
+  id               String           @id @default(cuid())
+  family_group_id  String
+  user_id          String?
+  profile_id       String
+  relationship     Relationship
+  is_primary       Boolean          @default(false)
+  created_at       DateTime         @default(now())
+
+  // Relationships
+  family_group     FamilyGroup      @relation(fields: [family_group_id], references: [id], onDelete: Cascade)
+  user             User?            @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  profile          Profile          @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+
+  @@map("family_members")
+}
+
+model MedicalRecord {
+  id            String           @id @default(cuid())
+  profile_id    String
+  record_type   MedicalRecordType
+  title         String
+  description   String?
+  file_url      String?
+  recorded_date DateTime?
+  created_at    DateTime         @default(now())
+  updated_at    DateTime         @updatedAt
+
+  // Relationships
+  profile       Profile          @relation(fields: [profile_id], references: [id], onDelete: Cascade)
+
+  @@map("medical_records")
+}
+
+model OTPVerification {
+  id             String         @id @default(cuid())
+  user_id        String?
+  mobile_number  String
+  otp_code       String
+  purpose        OTPPurpose
+  expires_at     DateTime
+  verified_at    DateTime?
+  created_at     DateTime       @default(now())
+
+  // Relationships
+  user           User?          @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("otp_verifications")
+}
+
+model RefreshToken {
+  id          String   @id @default(cuid())
+  token       String   @unique
+  user_id     String
+  expires_at  DateTime
+  created_at  DateTime @default(now())
+
+  // Relationships
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  user_id      String
+  hospital_id  String?
+  action_type  String
+  entity_type  String?
+  entity_id    String?
+  details      Json?
+  ip_address   String?
+  created_at   DateTime @default(now())
+
+  // Relationships
+  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  hospital     Hospital? @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+
+  @@map("audit_logs")
+}
+
+model Invitation {
+  id           String   @id @default(cuid())
+  email        String
+  token        String   @unique
+  role         UserRole
+  hospital_id  String?
+  permissions  Json?
+  invited_by   String
+  status       InvitationStatus @default(PENDING)
+  expires_at   DateTime
+  accepted_at  DateTime?
+  created_at   DateTime @default(now())
+
+  // Relationships
+  hospital     Hospital? @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  sender       User      @relation("InvitationSender", fields: [invited_by], references: [id], onDelete: Cascade)
+
+  @@map("invitations")
+}
+
+// Unified User Role Enum
+enum UserRole {
+  SUPER_ADMIN
+  HOSPITAL_ADMIN
+  DOCTOR
+  PATIENT
+  STAFF
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+  SUSPENDED
+}
+
+enum HospitalStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum HospitalUserStatus {
+  ACTIVE
+  INACTIVE
+  PENDING
+}
+
+enum DepartmentStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum ProfileType {
+  ADMIN
+  DOCTOR
+  PATIENT
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum Relationship {
+  SELF
+  SPOUSE
+  CHILD
+  PARENT
+  SIBLING
+  OTHER
+}
+
+enum MedicalRecordType {
+  PRESCRIPTION
+  LAB_REPORT
+  DIAGNOSIS
+  TREATMENT_PLAN
+  VACCINATION
+  ALLERGY
+  SURGERY
+  OTHER
+}
+
+enum OTPPurpose {
+  REGISTRATION
+  LOGIN
+  PASSWORD_RESET
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}

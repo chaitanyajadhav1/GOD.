@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
+import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/globals.css';
 
 export const metadata: Metadata = {
-  title: 'Prescription Builder - Professional Medical Prescription Management',
-  description: 'Create professional medical prescriptions with multiple template options',
+  title: 'Hospital Management System - Professional Medical Platform',
+  description: 'Comprehensive hospital administration, patient care, and medical records management system',
 };
 
 export default function RootLayout({
@@ -13,7 +14,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+      </body>
     </html>
   );
 }

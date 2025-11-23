@@ -1,7 +1,4 @@
-/**
- * Doctor API Route
- * Handles doctor profile operations
- */
+//api/doctor/route.ts
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Doctor } from '@/types';
