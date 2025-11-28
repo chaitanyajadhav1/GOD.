@@ -2,15 +2,24 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { createAuditLog } from '@/lib/utils';
+import { verifyAccessToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
     const { searchParams } = new URL(request.url);
     const profileId = searchParams.get('profile_id');
 
-    if (!userId) {
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let payload;
+    try {
+      payload = verifyAccessToken(token);
+    } catch {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
     // Verify user has access to this profile
@@ -18,12 +27,12 @@ export async function GET(request: NextRequest) {
       where: { 
         id: profileId!,
         OR: [
-          { user_id: userId },
+          { user_id: payload.userId },
           { 
             family_members: {
               some: {
                 family_group: {
-                  primary_user_id: userId
+                  primary_user_id: payload.userId
                 }
               }
             }
@@ -53,11 +62,18 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const userType = request.headers.get('x-user-type');
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
 
-    if (!userId) {
+    if (!token) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let payload;
+    try {
+      payload = verifyAccessToken(token);
+    } catch {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
     }
 
     const {
@@ -87,11 +103,11 @@ export async function POST(request: NextRequest) {
     }
 
     const hasAccess = 
-      profile.user_id === userId || // Own profile
+      profile.user_id === payload.userId ||
       profile.family_members.some((fm: { family_group: { primary_user_id: string; }; }) => 
-        fm.family_group.primary_user_id === userId
-      ) || // Family member
-      userType === 'DOCTOR'; // Doctor access
+        fm.family_group.primary_user_id === payload.userId
+      ) ||
+      payload.userType === 'DOCTOR';
 
     if (!hasAccess) {
       return NextResponse.json({ error: 'Access denied' }, { status: 403 });
@@ -110,7 +126,7 @@ export async function POST(request: NextRequest) {
 
     const ipAddress = request.headers.get('x-forwarded-for') || 'unknown';
     await createAuditLog(
-      userId,
+      payload.userId,
       'CREATE_MEDICAL_RECORD',
       'MEDICAL_RECORD',
       medicalRecord.id,

@@ -31,7 +31,10 @@ export async function authenticatedFetch(
 
   if (!token) {
     localStorage.removeItem('userData');
-    throw new Error('No access token found. Please login again.');
+    return new Response(
+      JSON.stringify({ error: 'Authentication required' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
   }
 
   const headers = new Headers(options.headers || {});

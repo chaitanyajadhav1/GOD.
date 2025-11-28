@@ -247,6 +247,53 @@ function RecentActivity() {
     return `${Math.floor(diffInSeconds / 86400)} days ago`;
   };
 
+  const formatDescription = (activity: any) => {
+    const d = activity.details || {};
+    const hospital = activity.hospital?.name;
+    switch (activity.action_type) {
+      case 'USER_LOGIN': {
+        const iden = d.email || d.mobileNumber || 'user';
+        const method = d.method ? String(d.method) : 'login';
+        return `${method} for ${iden}${hospital ? ` at ${hospital}` : ''}`;
+      }
+      case 'LOGIN_FAILED': {
+        const iden = d.email || d.mobileNumber || 'user';
+        const reason = d.reason ? String(d.reason) : 'failed';
+        return `Login failed for ${iden} (${reason})`;
+      }
+      case 'USER_LOGOUT': {
+        return 'User logged out';
+      }
+      case 'SEND_INVITATION': {
+        const email = d.email || 'unknown';
+        const role = d.role || 'user';
+        return `Invitation sent to ${email} for ${String(role).toLowerCase().replace('_',' ')}${hospital ? ` • ${hospital}` : ''}`;
+      }
+      case 'INVITATION_ACCEPTED': {
+        const email = d.email || 'unknown';
+        const role = d.role || 'user';
+        const h = d.hospitalName || hospital;
+        return `Invitation accepted by ${email}${h ? ` • ${h}` : ''} (${String(role).toLowerCase().replace('_',' ')})`;
+      }
+      case 'CREATE_HOSPITAL': {
+        const name = d.name || 'Hospital';
+        const admin = d.adminEmail || 'admin';
+        return `Created hospital ${name} • Admin ${admin}`;
+      }
+      case 'USER_SETUP_COMPLETED': {
+        const iden = d.email || d.mobileNumber || 'user';
+        return `Setup completed for ${iden}`;
+      }
+      default: {
+        try {
+          return JSON.stringify(activity.details || {});
+        } catch {
+          return 'No details';
+        }
+      }
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-lg shadow-sm p-6">
@@ -267,7 +314,7 @@ function RecentActivity() {
             <ActivityItem
               key={activity.id}
               action={activity.action_type.replace(/_/g, ' ')}
-              description={activity.details ? JSON.stringify(activity.details) : 'No details'}
+              description={formatDescription(activity)}
               time={formatTime(activity.created_at)}
               user={activity.user?.email || 'System'}
             />

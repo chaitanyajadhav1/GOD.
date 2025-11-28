@@ -567,6 +567,7 @@ export default function Home() {
   const { isAuthenticated, isLoading } = useAuth();
   const router = useRouter();
   const [userType, setUserType] = useState<'USER' | 'DOCTOR' | 'ADMIN' | 'SUPER_ADMIN'>('USER');
+  const [patientLoginMode, setPatientLoginMode] = useState<'otp' | 'password'>('otp');
 
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
@@ -671,11 +672,27 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Show email+password for hospital staff and super admin, OTP for patients */}
-            {userType === 'DOCTOR' || userType === 'ADMIN' || userType === 'SUPER_ADMIN' ? (
-              <EmailPasswordForm userType={userType} />
+            {/* Patients: OTP initially, password after setup */}
+            {userType === 'USER' ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setPatientLoginMode('otp')}
+                    className={`px-3 py-1 rounded-md text-sm ${patientLoginMode === 'otp' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                  >OTP Login</button>
+                  <button
+                    onClick={() => setPatientLoginMode('password')}
+                    className={`px-3 py-1 rounded-md text-sm ${patientLoginMode === 'password' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                  >Password Login</button>
+                </div>
+                {patientLoginMode === 'otp' ? (
+                  <OTPForm userType={userType} />
+                ) : (
+                  <EmailPasswordForm userType={'USER'} />
+                )}
+              </div>
             ) : (
-              <OTPForm userType={userType} />
+              <EmailPasswordForm userType={userType} />
             )}
           </div>
         </div>

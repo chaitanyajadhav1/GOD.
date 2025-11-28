@@ -30,15 +30,14 @@ export default function HospitalAdminDashboard() {
     try {
       const token = localStorage.getItem('accessToken');
       
-      // Fetch hospital data
-      const hospitalRes = await fetch('/api/hospitals', {
+      const hospitalRes = await fetch('/api/hospital-admin/hospital', {
         headers: { 'Authorization': `Bearer ${token}` },
       });
 
       if (hospitalRes.ok) {
         const data = await hospitalRes.json();
-        if (data.data && data.data.length > 0) {
-          setStats(prev => ({ ...prev, hospitalName: data.data[0].name }));
+        if (data.data) {
+          setStats(prev => ({ ...prev, hospitalName: data.data.name }));
         }
       }
 

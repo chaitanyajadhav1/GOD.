@@ -37,6 +37,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         localStorage.removeItem('userData');
       }
     }
+    // If no access token but we might have a refresh token cookie, try to refresh silently
+    if (!token) {
+      (async () => {
+        try {
+          const res = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+          });
+          if (res.ok) {
+            const data = await res.json();
+            if (data.accessToken) {
+              localStorage.setItem('accessToken', data.accessToken);
+              if (userData) {
+                try {
+                  setUser(JSON.parse(userData));
+                } catch {}
+              }
+            }
+          }
+        } catch {}
+        setIsLoading(false);
+      })();
+      return;
+    }
     
     setIsLoading(false);
   }, []);

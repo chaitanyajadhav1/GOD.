@@ -223,6 +223,17 @@ export async function POST(request: NextRequest) {
       });
     }
 
+    // If setup already completed, enforce password-based login
+    if (!isNewUser && !requiresSetup) {
+      return NextResponse.json(
+        {
+          error: 'OTP login is disabled after setup. Please use password login.',
+          hint: 'Use your email and password to login'
+        },
+        { status: 400 }
+      );
+    }
+
     // Generate temporary token for completing registration
     const tempToken = generateAccessToken({
       userId: user.id,

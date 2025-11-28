@@ -1,31 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { verifyAccessToken } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
-    const userType = request.headers.get('x-user-type');
+    const authHeader = request.headers.get('authorization') || request.headers.get('Authorization');
+    const token = authHeader?.replace(/^Bearer\s+/i, '').trim();
     const { searchParams } = new URL(request.url);
     const hospitalId = searchParams.get('hospital_id');
     const limit = parseInt(searchParams.get('limit') || '100');
 
-    if (!userId) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    if (!token) {
+      return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
     }
 
-    let whereCondition: any = {};
+    let payload;
+    try {
+      payload = verifyAccessToken(token);
+    } catch (e) {
+      return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+    }
 
-    // Regular users can only see their own logs
-    if (userType === 'PATIENT' || userType === 'USER' || userType === 'FAMILY_MEMBER') {
-      whereCondition.user_id = userId;
-    } 
-    // Hospital staff can see hospital logs
-    else if (hospitalId && (userType === 'HOSPITAL_ADMIN' || userType === 'DOCTOR')) {
-      // Verify user has access to this hospital
+    const whereCondition: Record<string, unknown> = {};
+
+    if (payload.userType === 'SUPER_ADMIN') {
+    } else if (hospitalId && (payload.userType === 'HOSPITAL_ADMIN' || payload.userType === 'DOCTOR')) {
       const hospitalUser = await prisma.hospitalUser.findFirst({
         where: {
           hospital_id: hospitalId,
-          user_id: userId,
+          user_id: payload.userId,
         },
       });
 
@@ -34,12 +37,8 @@ export async function GET(request: NextRequest) {
       }
 
       whereCondition.hospital_id = hospitalId;
-    }
-    // Super admin can see all logs
-    else if (userType === 'SUPER_ADMIN') {
-      // No restrictions - can see all logs
     } else {
-      whereCondition.user_id = userId;
+      whereCondition.user_id = payload.userId;
     }
 
     const auditLogs = await prisma.auditLog.findMany({
@@ -56,9 +55,9 @@ export async function GET(request: NextRequest) {
       take: limit,
     });
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       logs: auditLogs,
-      count: auditLogs.length 
+      count: auditLogs.length
     });
   } catch (error) {
     console.error('Get audit logs error:', error);
