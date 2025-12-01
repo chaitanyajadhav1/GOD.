@@ -4,6 +4,12 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { authenticatedFetch } from '@/lib/api-client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Separator } from '@/components/ui/separator';
+import { Building2, CheckCircle2, Mail, Users, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
 interface DashboardStats {
   totalHospitals: number;
@@ -20,6 +26,7 @@ export default function SuperAdminDashboard() {
     totalUsers: 0,
   });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchDashboardStats();
@@ -27,25 +34,27 @@ export default function SuperAdminDashboard() {
 
   const fetchDashboardStats = async () => {
     try {
-      // Fetch hospitals
-      const hospitalsRes = await authenticatedFetch('/api/super-admin/hospitals');
-
-      // Fetch invitations
-      const invitationsRes = await authenticatedFetch('/api/super-admin/invitations');
+      // Fetch all data in parallel instead of sequentially
+      const [hospitalsRes, invitationsRes] = await Promise.allSettled([
+        authenticatedFetch('/api/super-admin/hospitals'),
+        authenticatedFetch('/api/super-admin/invitations'),
+      ]);
 
       let totalHospitals = 0;
       let activeHospitals = 0;
       let pendingInvitations = 0;
 
-      if (hospitalsRes.ok) {
-        const hospitalsData = await hospitalsRes.json();
+      // Handle hospitals response
+      if (hospitalsRes.status === 'fulfilled' && hospitalsRes.value.ok) {
+        const hospitalsData = await hospitalsRes.value.json();
         const hospitals = hospitalsData.data || [];
         totalHospitals = hospitals.length;
         activeHospitals = hospitals.filter((h: any) => h.status === 'ACTIVE').length;
       }
 
-      if (invitationsRes.ok) {
-        const invitationsData = await invitationsRes.json();
+      // Handle invitations response
+      if (invitationsRes.status === 'fulfilled' && invitationsRes.value.ok) {
+        const invitationsData = await invitationsRes.value.json();
         const invitations = invitationsData.data || [];
         pendingInvitations = invitations.filter((inv: any) => inv.status === 'PENDING').length;
       }
@@ -58,6 +67,7 @@ export default function SuperAdminDashboard() {
       });
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setError('Failed to load dashboard statistics');
     } finally {
       setLoading(false);
     }
@@ -65,110 +75,145 @@ export default function SuperAdminDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
 
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription className="mt-2 flex items-center justify-between">
+          <span>{error}</span>
+          <Button 
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setLoading(true);
+              setError(null);
+              fetchDashboardStats();
+            }}
+          >
+            Try Again
+          </Button>
+        </AlertDescription>
+      </Alert>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Welcome Section */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Welcome, Super Admin
-        </h1>
-        <p className="text-gray-600">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Welcome, Super Admin</h1>
+        <p className="text-muted-foreground mt-2">
           Manage hospitals, users, and invitations from this dashboard.
         </p>
       </div>
 
+      <Separator />
+
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="Total Hospitals"
           value={stats.totalHospitals}
-          icon="🏥"
+          icon={Building2}
           color="blue"
           href="/dashboard/super-admin/hospitals"
         />
         <StatCard
           title="Active Hospitals"
           value={stats.activeHospitals}
-          icon="✅"
+          icon={CheckCircle2}
           color="green"
         />
         <StatCard
           title="Pending Invitations"
           value={stats.pendingInvitations}
-          icon="📧"
+          icon={Mail}
           color="yellow"
           href="/dashboard/super-admin/invitations"
         />
         <StatCard
           title="Total Users"
           value={stats.totalUsers}
-          icon="👥"
+          icon={Users}
           color="purple"
         />
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <QuickActionCard
-          title="Create New Hospital"
-          description="Add a new hospital to the platform"
-          icon="🏥"
-          buttonText="Create Hospital"
-          href="/dashboard/super-admin/hospitals?create=new"
-          color="blue"
-        />
-        <QuickActionCard
-          title="Send Invitations"
-          description="Invite doctors and staff to hospitals"
-          icon="📧"
-          buttonText="Send Invite"
-          href="/dashboard/super-admin/invitations?create=new"
-          color="green"
-        />
+      <div>
+        <h2 className="text-xl font-semibold mb-4">Quick Actions</h2>
+        <div className="grid gap-4 md:grid-cols-2">
+          <QuickActionCard
+            title="Create New Hospital"
+            description="Add a new hospital to the platform"
+            icon={Building2}
+            buttonText="Create Hospital"
+            href="/dashboard/super-admin/hospitals?create=new"
+            color="blue"
+          />
+          <QuickActionCard
+            title="Send Invitations"
+            description="Invite doctors and staff to hospitals"
+            icon={Mail}
+            buttonText="Send Invite"
+            href="/dashboard/super-admin/invitations?create=new"
+            color="green"
+          />
+        </div>
       </div>
 
-      {/* Recent Activity - Fetch from audit logs */}
+      {/* Recent Activity */}
       <RecentActivity />
     </div>
   );
 }
 
 // Stat Card Component
-function StatCard({ title, value, icon, color, href }: {
+function StatCard({ title, value, icon: Icon, color, href }: {
   title: string;
   value: number;
-  icon: string;
+  icon: React.ElementType;
   color: string;
   href?: string;
 }) {
   const colorClasses = {
-    blue: 'bg-blue-50 text-blue-700',
-    green: 'bg-green-50 text-green-700',
-    yellow: 'bg-yellow-50 text-yellow-700',
-    purple: 'bg-purple-50 text-purple-700',
+    blue: 'hover:bg-blue-50 border-blue-200',
+    green: 'hover:bg-green-50 border-green-200',
+    yellow: 'hover:bg-yellow-50 border-yellow-200',
+    purple: 'hover:bg-purple-50 border-purple-200',
+  };
+
+  const iconColorClasses = {
+    blue: 'text-blue-600',
+    green: 'text-green-600',
+    yellow: 'text-yellow-600',
+    purple: 'text-purple-600',
   };
 
   const content = (
-    <div className={`p-6 rounded-lg ${colorClasses[color as keyof typeof colorClasses]}`}>
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium">{title}</p>
-          <p className="text-3xl font-bold mt-2">{value}</p>
-        </div>
-        <span className="text-2xl">{icon}</span>
-      </div>
-    </div>
+    <Card className={`transition-colors ${colorClasses[color as keyof typeof colorClasses]} ${href ? 'cursor-pointer' : ''}`}>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">
+          {title}
+        </CardTitle>
+        <Icon className={`h-4 w-4 ${iconColorClasses[color as keyof typeof iconColorClasses]}`} />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{value}</div>
+      </CardContent>
+    </Card>
   );
 
   if (href) {
     return (
-      <Link href={href} className="block hover:opacity-90 transition-opacity">
+      <Link href={href}>
         {content}
       </Link>
     );
@@ -178,37 +223,37 @@ function StatCard({ title, value, icon, color, href }: {
 }
 
 // Quick Action Card Component
-function QuickActionCard({ title, description, icon, buttonText, href, color }: {
+function QuickActionCard({ title, description, icon: Icon, buttonText, href, color }: {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ElementType;
   buttonText: string;
   href: string;
   color: string;
 }) {
-  const colorClasses = {
-    blue: 'border-blue-200 bg-blue-50',
-    green: 'border-green-200 bg-green-50',
+  const iconColorClasses = {
+    blue: 'text-blue-600',
+    green: 'text-green-600',
   };
 
   return (
-    <div className={`border rounded-lg p-6 ${colorClasses[color as keyof typeof colorClasses]}`}>
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center mb-2">
-            <span className="text-2xl mr-3">{icon}</span>
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-          </div>
-          <p className="text-gray-600 mb-4">{description}</p>
-          <Link
-            href={href}
-            className="inline-flex items-center px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            {buttonText}
-          </Link>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center gap-2">
+          <Icon className={`h-5 w-5 ${iconColorClasses[color as keyof typeof iconColorClasses]}`} />
+          <CardTitle>{title}</CardTitle>
         </div>
-      </div>
-    </div>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Button asChild className="w-full">
+          <Link href={href}>
+            {buttonText}
+            <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -216,6 +261,7 @@ function QuickActionCard({ title, description, icon, buttonText, href, color }: 
 function RecentActivity() {
   const [activities, setActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRecentActivity();
@@ -223,14 +269,29 @@ function RecentActivity() {
 
   const fetchRecentActivity = async () => {
     try {
-      const response = await authenticatedFetch('/api/audit-logs?limit=5');
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const response = await authenticatedFetch('/api/audit-logs?limit=5', {
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data = await response.json();
         setActivities(data.logs || []);
+      } else {
+        setError('Failed to load activity');
       }
-    } catch (error) {
-      console.error('Error fetching recent activity:', error);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        setError('Request timed out');
+      } else {
+        console.error('Error fetching recent activity:', error);
+        setError('Unable to load activity');
+      }
     } finally {
       setLoading(false);
     }
@@ -294,36 +355,70 @@ function RecentActivity() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-        <div className="flex items-center justify-center h-32">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h2>
-      <div className="space-y-3">
-        {activities.length > 0 ? (
-          activities.map((activity) => (
-            <ActivityItem
-              key={activity.id}
-              action={activity.action_type.replace(/_/g, ' ')}
-              description={formatDescription(activity)}
-              time={formatTime(activity.created_at)}
-              user={activity.user?.email || 'System'}
-            />
-          ))
-        ) : (
-          <p className="text-gray-500 text-center py-4">No recent activity</p>
+    <Card>
+      <CardHeader>
+        <CardTitle>Recent Activity</CardTitle>
+        <CardDescription>Latest actions and events in the system</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading && (
+          <div className="space-y-4">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="flex gap-4">
+                <Skeleton className="h-2 w-2 rounded-full mt-2 flex-shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-1/2" />
+                  <Skeleton className="h-3 w-3/4" />
+                  <Skeleton className="h-3 w-1/3" />
+                </div>
+              </div>
+            ))}
+          </div>
         )}
-      </div>
-    </div>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Error</AlertTitle>
+            <AlertDescription className="mt-2 flex items-center justify-between">
+              <span>{error}</span>
+              <Button 
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setLoading(true);
+                  setError(null);
+                  fetchRecentActivity();
+                }}
+              >
+                Retry
+              </Button>
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {!loading && !error && (
+          <div className="space-y-4">
+            {activities.length > 0 ? (
+              activities.map((activity) => (
+                <ActivityItem
+                  key={activity.id}
+                  action={activity.action_type.replace(/_/g, ' ')}
+                  description={formatDescription(activity)}
+                  time={formatTime(activity.created_at)}
+                  user={activity.user?.email || 'System'}
+                />
+              ))
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <p className="text-sm text-muted-foreground">No recent activity</p>
+              </div>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -335,17 +430,17 @@ function ActivityItem({ action, description, time, user }: {
   user: string;
 }) {
   return (
-    <div className="flex items-start space-x-3 p-3 bg-gray-50 rounded-lg">
-      <div className="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-gray-900 capitalize">
+    <div className="flex gap-4 items-start">
+      <div className="flex-shrink-0 w-2 h-2 bg-primary rounded-full mt-2" />
+      <div className="flex-1 min-w-0 space-y-1">
+        <p className="text-sm font-medium capitalize leading-none">
           {action}
         </p>
-        <p className="text-sm text-gray-600 truncate">
+        <p className="text-sm text-muted-foreground line-clamp-2">
           {description}
         </p>
-        <p className="text-xs text-gray-500 mt-1">
-          {time} • By {user}
+        <p className="text-xs text-muted-foreground">
+          {time} • {user}
         </p>
       </div>
     </div>

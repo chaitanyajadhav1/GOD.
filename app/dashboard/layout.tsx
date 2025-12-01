@@ -3,6 +3,9 @@
 import { useAuth } from '@/components/AuthProvider';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { LogOut } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -33,15 +36,17 @@ export default function DashboardLayout({
                 <span className="text-gray-700">
                   Welcome, {user?.mobileNumber}
                 </span>
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                <Badge variant="secondary" className="capitalize">
                   {user?.userType.toLowerCase().replace('_', ' ')}
-                </span>
-                <button
+                </Badge>
+                <Button
                   onClick={handleLogout}
-                  className="bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700"
+                  variant="destructive"
+                  size="sm"
                 >
+                  <LogOut className="mr-2 h-4 w-4" />
                   Logout
-                </button>
+                </Button>
               </div>
             </div>
           </div>

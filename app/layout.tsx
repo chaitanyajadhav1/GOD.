@@ -1,3 +1,4 @@
+import React from 'react';
 import type { Metadata } from 'next';
 import { AuthProvider } from '@/components/AuthProvider';
 import '../styles/globals.css';

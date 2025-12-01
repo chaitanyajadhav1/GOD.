@@ -24,4 +24,3 @@ export function getBrandingStyles(): React.CSSProperties {
     '--secondary-color': branding.secondaryColor,
   } as React.CSSProperties;
 }
-

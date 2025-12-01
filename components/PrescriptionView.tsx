@@ -20,7 +20,7 @@ interface PrescriptionViewProps {
 
 export default function PrescriptionView({ prescription, onBack }: PrescriptionViewProps) {
   const [isExporting, setIsExporting] = React.useState(false);
-
+         
   const renderTemplate = () => {
     switch (prescription.templateId) {
       case 'modern':
@@ -34,6 +34,7 @@ export default function PrescriptionView({ prescription, onBack }: PrescriptionV
     }
   };
 
+  
   const handleExportPDF = async () => {
     setIsExporting(true);
     try {

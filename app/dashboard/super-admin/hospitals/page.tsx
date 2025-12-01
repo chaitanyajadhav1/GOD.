@@ -5,6 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import HospitalForm from './components/HospitalForm';
 import HospitalsList from './components/HospitalsList';
 import { authenticatedFetch } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, Plus } from 'lucide-react';
 
 interface Hospital {
   id: string;
@@ -84,7 +87,7 @@ export default function HospitalsPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600" />
       </div>
     );
   }
@@ -92,27 +95,24 @@ export default function HospitalsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Hospitals</h1>
           <p className="text-gray-600 mt-1">
             Manage all hospitals in the system
           </p>
         </div>
-        <button
-          onClick={handleCreateHospital}
-          className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-        >
-          <span className="mr-2">+</span>
+        <Button onClick={handleCreateHospital}>
+          <Plus className="mr-2 h-4 w-4" />
           Add Hospital
-        </button>
+        </Button>
       </div>
 
       {/* Error Message */}
       {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
       )}
 
       {/* Hospital Form Modal */}

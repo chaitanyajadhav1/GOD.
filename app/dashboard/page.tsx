@@ -3,10 +3,7 @@
 import { useAuth } from '@/components/AuthProvider';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import SuperAdminDashboard from './super-admin/page';
-import HospitalAdminDashboard from './hospital-admin/page';
-import DoctorDashboard from './doctor/page';
-import PatientDashboard from './patient/page';
+import { Loader2 } from 'lucide-react';
 
 export default function Dashboard() {
   const { user, isLoading } = useAuth();
@@ -15,32 +12,36 @@ export default function Dashboard() {
   useEffect(() => {
     if (!isLoading && !user) {
       router.push('/');
+      return;
+    }
+
+    // Redirect to specific dashboard route instead of rendering component
+    if (!isLoading && user) {
+      const userType = user.userType || '';
+      
+      switch (userType) {
+        case 'SUPER_ADMIN':
+          router.replace('/dashboard/super-admin');
+          break;
+        case 'HOSPITAL_ADMIN':
+          router.replace('/dashboard/hospital-admin');
+          break;
+        case 'DOCTOR':
+          router.replace('/dashboard/doctor');
+          break;
+        default:
+          router.replace('/dashboard/patient');
+      }
     }
   }, [user, isLoading, router]);
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  // Show loading state while redirecting
+  return (
+    <div className="flex items-center justify-center h-screen">
+      <div className="text-center">
+        <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto" />
+        <p className="mt-4 text-muted-foreground">Loading dashboard...</p>
       </div>
-    );
-  }
-
-  // Route to appropriate dashboard based on user type
-  const userType = user?.userType || '';
-
-  if (userType === 'SUPER_ADMIN') {
-    return <SuperAdminDashboard />;
-  }
-
-  if (userType === 'HOSPITAL_ADMIN') {
-    return <HospitalAdminDashboard />;
-  }
-
-  if (userType === 'DOCTOR') {
-    return <DoctorDashboard />;
-  }
-
-  // Default to patient dashboard
-  return <PatientDashboard />;
+    </div>
+  );
 }

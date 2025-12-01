@@ -3,6 +3,27 @@
 
 import { useState } from 'react';
 import { authenticatedFetch } from '@/lib/api-client';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Loader2 } from 'lucide-react';
 
 interface Hospital {
   id: string;
@@ -31,9 +52,17 @@ export default function InvitationForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleRoleChange = (value: string) => {
+    setFormData(prev => ({ ...prev, role: value }));
+  };
+
+  const handleHospitalChange = (value: string) => {
+    setFormData(prev => ({ ...prev, hospitalId: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,119 +97,122 @@ export default function InvitationForm({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900">
-              Send Invitation
-            </h2>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              ✕
-            </button>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Send Invitation</DialogTitle>
+          <DialogDescription>
+            Send an invitation to a new user to join a hospital
+          </DialogDescription>
+        </DialogHeader>
+
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address *</Label>
+            <Input
+              id="email"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter email address"
+            />
           </div>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-700 rounded">
-              {error}
-            </div>
-          )}
+          <div className="space-y-2">
+            <Label htmlFor="role">Role *</Label>
+            <Select value={formData.role} onValueChange={handleRoleChange} required>
+              <SelectTrigger id="role">
+                <SelectValue placeholder="Select a role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="DOCTOR">Doctor</SelectItem>
+                <SelectItem value="HOSPITAL_ADMIN">Hospital Admin</SelectItem>
+                <SelectItem value="STAFF">Staff</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter email address"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Role *
-              </label>
-              <select
-                name="role"
-                value={formData.role}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="DOCTOR">Doctor</option>
-                <option value="HOSPITAL_ADMIN">Hospital Admin</option>
-                <option value="STAFF">Staff</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Hospital *
-              </label>
-              <select
-                name="hospitalId"
-                value={formData.hospitalId}
-                onChange={handleChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="">Select a hospital</option>
+          <div className="space-y-2">
+            <Label htmlFor="hospital">Hospital *</Label>
+            <Select 
+              value={formData.hospitalId} 
+              onValueChange={handleHospitalChange} 
+              required
+            >
+              <SelectTrigger id="hospital">
+                <SelectValue placeholder="Select a hospital" />
+              </SelectTrigger>
+              <SelectContent>
                 {hospitals.map((hospital) => (
-                  <option key={hospital.id} value={hospital.id}>
+                  <SelectItem key={hospital.id} value={hospital.id}>
                     {hospital.name}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </div>
+              </SelectContent>
+            </Select>
+          </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Permissions (Optional)
-              </label>
-              <div className="space-y-2 text-sm">
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="ml-2">View Patients</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="ml-2">Manage Appointments</span>
-                </label>
-                <label className="flex items-center">
-                  <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
-                  <span className="ml-2">Access Medical Records</span>
-                </label>
+          <div className="space-y-3">
+            <Label>Permissions (Optional)</Label>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="view-patients" />
+                <Label 
+                  htmlFor="view-patients" 
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  View Patients
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="manage-appointments" />
+                <Label 
+                  htmlFor="manage-appointments" 
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Manage Appointments
+                </Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox id="access-records" />
+                <Label 
+                  htmlFor="access-records" 
+                  className="text-sm font-normal cursor-pointer"
+                >
+                  Access Medical Records
+                </Label>
               </div>
             </div>
+          </div>
 
-            <div className="flex justify-end space-x-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={loading}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:opacity-50"
-              >
-                {loading ? 'Sending...' : 'Send Invitation'}
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={loading}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? 'Sending...' : 'Send Invitation'}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

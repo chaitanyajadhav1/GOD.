@@ -7,7 +7,7 @@
  * Example:
  *   npx tsx scripts/create-super-admin.ts admin@example.com SecurePass123! +919876543210
  */
-
+//scripts/create-super-admin.ts
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 

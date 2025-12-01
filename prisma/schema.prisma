@@ -349,3 +349,25 @@ enum InvitationStatus {
   EXPIRED
   REVOKED
 }
+
+// Add this to your schema.prisma file
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  user_id     String
+  action      String   // e.g., "LOGIN", "LOGOUT", "CREATE_USER", "UPDATE_PROFILE"
+  entity_type String?  // e.g., "USER", "HOSPITAL", "APPOINTMENT"
+  entity_id   String?  // ID of the affected entity
+  details     String?  @db.Text // JSON string with additional details
+  ip_address  String?
+  user_agent  String?
+  timestamp   DateTime @default(now())
+  
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  
+  @@index([user_id])
+  @@index([action])
+  @@index([timestamp])
+  @@index([entity_type, entity_id])
+  @@map("audit_logs")
+}
