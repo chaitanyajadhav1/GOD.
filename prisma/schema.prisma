@@ -135,7 +135,7 @@ model DoctorProfile {
   profile_id              String   @unique
   medical_license_number  String?
   specialization          String?
-  department              String?   // Add this line
+  department              String?
   qualifications          String[]
   experience_years        Int?
   consultation_fee        Float?
@@ -235,20 +235,28 @@ model RefreshToken {
 }
 
 model AuditLog {
-  id           String   @id @default(cuid())
-  user_id      String
-  hospital_id  String?
-  action_type  String
-  entity_type  String?
-  entity_id    String?
-  details      Json?
-  ip_address   String?
-  created_at   DateTime @default(now())
+  id          String   @id @default(cuid())
+  user_id     String
+  hospital_id String?
+  action      String
+  action_type String?
+  entity_type String?
+  entity_id   String?
+  details     Json?
+  ip_address  String?
+  user_agent  String?
+  created_at  DateTime @default(now())
+  timestamp   DateTime @default(now())
 
   // Relationships
-  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  hospital     Hospital? @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  hospital    Hospital? @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
 
+  @@index([user_id])
+  @@index([action])
+  @@index([created_at])
+  @@index([timestamp])
+  @@index([entity_type, entity_id])
   @@map("audit_logs")
 }
 
@@ -348,26 +356,4 @@ enum InvitationStatus {
   ACCEPTED
   EXPIRED
   REVOKED
-}
-
-// Add this to your schema.prisma file
-
-model AuditLog {
-  id          String   @id @default(uuid())
-  user_id     String
-  action      String   // e.g., "LOGIN", "LOGOUT", "CREATE_USER", "UPDATE_PROFILE"
-  entity_type String?  // e.g., "USER", "HOSPITAL", "APPOINTMENT"
-  entity_id   String?  // ID of the affected entity
-  details     String?  @db.Text // JSON string with additional details
-  ip_address  String?
-  user_agent  String?
-  timestamp   DateTime @default(now())
-  
-  user        User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  
-  @@index([user_id])
-  @@index([action])
-  @@index([timestamp])
-  @@index([entity_type, entity_id])
-  @@map("audit_logs")
 }
