@@ -91,3 +91,14 @@ export function getClientIP(request: Request): string {
 export function getUserAgent(request: Request): string {
   return request.headers.get('user-agent') || 'unknown';
 }
+// Add these exports at the end of your utils.ts file
+
+export function generateOTP(): string {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+}
+
+export async function sendWelcomeEmail(email: string, name: string): Promise<void> {
+  // TODO: Implement email sending logic
+  console.log(`Welcome email would be sent to ${email} for ${name}`);
+  return Promise.resolve();
+}
