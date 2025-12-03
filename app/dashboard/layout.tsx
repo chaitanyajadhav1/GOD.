@@ -5,7 +5,6 @@ import ProtectedRoute from '@/components/ProtectedRoute';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { LogOut } from 'lucide-react';
 
 export default function DashboardLayout({
   children,
@@ -32,7 +31,7 @@ export default function DashboardLayout({
                 </h1>
               </div>
               
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center gap-4">
                 <span className="text-gray-700">
                   Welcome, {user?.mobileNumber}
                 </span>
@@ -44,14 +43,13 @@ export default function DashboardLayout({
                   variant="destructive"
                   size="sm"
                 >
-                  <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </Button>
               </div>
             </div>
           </div>
         </nav>
-        <main className="w-full py-6 px-0 sm:px-4 lg:px-6">
+        <main className="w-full">
           {children}
         </main>
       </div>
